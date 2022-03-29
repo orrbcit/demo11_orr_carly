@@ -1,7 +1,7 @@
 var currentUser;
 firebase.auth().onAuthStateChanged(user => {
     if (user) {
-        currentUser = db.collection("users").doc(user.uid); //global
+        currentUser = db.collection("users").doc(user.uid); //global - gets John Doe
         console.log(currentUser);
 
         // the following functions are always called when someone is logged in
@@ -53,6 +53,7 @@ function insertName() {
 
 //---------------------------------------------------------------------
 // This function populates the Hikes collection with some fake data
+// It is only called "one time" to create some fake data.
 // it has numerical values for length, duration, etc. so that we can sort later
 // It also has an extra field to store timestamps
 //----------------------------------------------------------------------
@@ -103,11 +104,14 @@ function populateCardsDynamically() {
     let hikeCardGroup = document.getElementById("hikeCardGroup");
 
     db.collection("Hikes")
-    .orderBy("length_time")  //insert variable that represents the sortkey
-    .limit(2)
+    .where("userID", "==", currentUser)    //automatic !!! yah!
+    .orderBy("timestamp", "desc")  //insert variable that represents the sortkey
+    //.limit(5)
     .get()
         .then(allHikes => {
             allHikes.forEach(doc => {
+                console.log(doc.id); //firestore document ID
+
                 var hikeName = doc.data().name; //gets the name field
                 var hikeID = doc.data().id; //gets the unique ID field
                 var hikeLength = doc.data().length; //gets the length field
@@ -122,6 +126,53 @@ function populateCardsDynamically() {
                     "Duration: " + doc.data().length_time + "min <br>" +
                     "Last updated: " + doc.data().last_updated.toDate();
 
+
+                testHikeCard.querySelector('a').onclick = () => setHikeData(hikeID);
+                testHikeCard.querySelector('img').src = `./images/${hikeID}.jpg`;
+
+                testHikeCard.querySelector('i').id = 'save-' + hikeID;
+                testHikeCard.querySelector('i').onclick = () => saveBookmark(hikeID);
+
+                hikeCardGroup.appendChild(testHikeCard);
+            })
+
+        })
+}
+//populateCardsDynamically();
+
+//---------------------------------------------------------------------
+// This is a function that is called when everytime the page loads
+// to read from the Hikes collection, go through each card,
+// and dynamically creates a bootstrap card to display each hike.
+// You can change the card style by using a different template. 
+//---------------------------------------------------------------------
+function populateMyPosts() {
+    let hikeCardTemplate = document.getElementById("postCardTemplate");
+    let hikeCardGroup = document.getElementById("postCardGroup");
+
+    db.collection("Potties")
+    .where("userID", "==", currentUser)    //automatic !!! yah!
+    .orderBy("timestamp", "desc")  //insert variable that represents the sortkey
+    //.limit(5)
+    .get()
+        .then(snap => {
+            snap.forEach(doc => {
+                console.log(doc.id); //firestore document ID for one pottie
+
+                var title = doc.data().title; //gets the name field
+                var details = doc.data().details; //gets the unique ID field
+                var hikeLength = doc.data().length; //gets the length field
+
+                let testHikeCard = hikeCardTemplate.content.cloneNode(true);
+
+                testHikeCard.querySelector('.card-title').innerHTML = hikeName;
+                //testHikeCard.querySelector('.card-length').innerHTML = hikeLength;
+
+                //NEW LINE: update to display length, duration, last updated
+                testHikeCard.querySelector('.card-length').innerHTML =
+                    "Length: " + doc.data().length + " km <br>" +
+                    "Duration: " + doc.data().length_time + "min <br>" +
+                    "Last updated: " + doc.data().last_updated.toDate();
 
                 testHikeCard.querySelector('a').onclick = () => setHikeData(hikeID);
                 testHikeCard.querySelector('img').src = `./images/${hikeID}.jpg`;
@@ -156,3 +207,30 @@ function saveBookmark(hikeID) {
 function setHikeData(id) {
     localStorage.setItem('hikeID', id);
 }
+
+function displaySearchValue(){
+    console.log(document.getElementById("mySearch"));
+    var x = document.getElementById("mySearch").value;
+    alert (x);
+}
+
+//---------------------------------------------------------------
+// this function is called one time to poplulate / create an array 
+// for the user
+//---------------------------------------------------------------
+function writeFakeSchedule(){
+    currentUser.set({
+        schedule: ["abc", "123"]
+    }, {
+        merge: true
+    })
+    .then(function () {
+        console.log("schedule created and saved for the user");
+    });
+}
+
+
+
+
+
+
